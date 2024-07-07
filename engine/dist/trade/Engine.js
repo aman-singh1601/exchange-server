@@ -64,8 +64,42 @@ class Engine {
         const { fills, executedQty } = orderbook.addOrder(order);
         this.updateBalance(userId, baseAsset, quoteAsset, side, fills, executedQty);
         console.log("balances: after orderplaced: ", this.balances);
-        console.log("orderbook", this.orderbooks);
+        console.log("aks: ", this.orderbooks[0].asks);
+        console.log("bids: ", this.orderbooks[0].bids);
+        this.publisWsDepthUpdates(fills, price, side, market);
         return { executedQty, fills, orderId: order.orderId };
+    }
+    publisWsDepthUpdates(fills, price, side, market) {
+        const orderbook = this.orderbooks.find(o => o.ticker() === market);
+        if (!orderbook)
+            return;
+        const depth = orderbook.getDepth();
+        if (side === "buy") {
+            const updatedAsks = depth === null || depth === void 0 ? void 0 : depth.asks.filter(x => fills.map(f => f.price).includes(x[0].toString()));
+            const updatedBid = depth === null || depth === void 0 ? void 0 : depth.bids.find(x => x[0] === price);
+            console.log("publish ws depth updates");
+            RedisManager_1.RedisManager.getInstance().publishMessage(`depth@${market}`, {
+                stream: `depth@${market}`,
+                data: {
+                    a: updatedAsks,
+                    b: updatedBid ? [updatedBid] : [],
+                    e: "depth"
+                }
+            });
+        }
+        if (side === "sell") {
+            const updatedBids = depth === null || depth === void 0 ? void 0 : depth.bids.filter(x => fills.map(f => f.price).includes(x[0].toString()));
+            const updatedAsk = depth === null || depth === void 0 ? void 0 : depth.asks.find(x => x[0] === price);
+            console.log("publish ws depth updates");
+            RedisManager_1.RedisManager.getInstance().publishMessage(`depth@${market}`, {
+                stream: `depth@${market}`,
+                data: {
+                    a: updatedAsk ? [updatedAsk] : [],
+                    b: updatedBids,
+                    e: "depth"
+                }
+            });
+        }
     }
     updateBalance(userId, baseAsset, quoteAsset, side, fills, executedQty) {
         if (side === "buy") {
