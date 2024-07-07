@@ -32,3 +32,24 @@ exports.orderRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, fu
     });
     res.json(response.payload);
 }));
+exports.orderRouter.delete("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderId, market } = req.body;
+    const response = yield RedisManager_1.RedisManager.getInstance().sendMessageAndAwait({
+        type: types_1.CANCEL_ORDER,
+        data: {
+            market,
+            orderId
+        }
+    });
+    return res.json(response.payload);
+}));
+exports.orderRouter.get("/open", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const response = yield RedisManager_1.RedisManager.getInstance().sendMessageAndAwait({
+        type: types_1.GET_OPEN_ORDERS,
+        data: {
+            userId: req.query.userId,
+            market: req.query.market
+        }
+    });
+    res.json(response.payload);
+}));
